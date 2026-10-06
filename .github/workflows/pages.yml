@@ -1,0 +1,46 @@
+name: Publish free beta
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '37 4 * * 2'
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests
+      - run: node --test tests/test_static_api.js
+      - name: Sync bounded public snapshot
+        run: python sync.py --source all --limit 200
+        env:
+          VISUAL_WORLD_DB_PATH: ${{ runner.temp }}/visual_world.db
+      - name: Export static site
+        run: python export_static.py --output dist
+        env:
+          VISUAL_WORLD_DB_PATH: ${{ runner.temp }}/visual_world.db
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

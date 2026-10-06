@@ -1,6 +1,23 @@
 # Deployment
 
-## V0.5 public beta
+## Free GitHub Pages beta
+
+The public repository uses `.github/workflows/pages.yml` to build a fresh, isolated SQLite database, synchronize up to 200 real records per source, export a rights-aware static snapshot, and deploy it to GitHub Pages. The workflow also runs weekly and can be started manually. The database and third-party image files are not committed or uploaded; only the static site and normalized metadata snapshot are published.
+
+1. In repository Settings → Pages, select **GitHub Actions** as the build and deployment source.
+2. Run **Publish free beta** from Actions, or push a change to `main`. The workflow keeps the old site live if a connector or export fails.
+3. Open the Pages URL and verify search, source/year/public-domain/image filters, artwork details, original record links and rights text.
+
+For a local preview using an existing synchronized database:
+
+```bash
+python export_static.py --output dist
+python -m http.server 8788 --directory dist
+```
+
+`dist/` is ignored by Git. Remove it before rebuilding locally. Pages has no live Python API or persistent SQLite database: search runs in the browser against the bounded snapshot, and freshness depends on a successful weekly workflow run. Do not describe it as a full real-time corpus.
+
+## Optional paid Render service
 
 `render.yaml` defines a Docker web service with a persistent `/data` disk, a health check, and `VISUAL_WORLD_DB_PATH=/data/visual_world.db`. Review the paid compute plan and disk size before connecting the Blueprint to a Render account. The service starts with an empty database until the first sync completes.
 

@@ -2,9 +2,9 @@
 
 **Visual World** is an open visual-culture index designed to aggregate as much publicly indexable art, illustration and design material as possible across museums, open collections and resource directories.
 
-The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world) and is ready for local review and a first hosted deployment. A persistent host and initial production data load are still required before the website is publicly available.
+The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world). The free public beta is built as a periodically refreshed GitHub Pages snapshot; the original Python API and Docker deployment remain available for a future dynamic host.
 
-It is **not** a hand-picked 300–500 image gallery. Source records can grow to hundreds of thousands or millions; the website searches the synchronized database and preserves provenance and rights information for every record.
+It is **not** a hand-picked image gallery. The canonical database can grow beyond the bounded free-site snapshot. GitHub Pages searches its exported snapshot in the browser, while a future dynamic host can serve a larger corpus through the existing API.
 
 ## What V0.5 adds
 
@@ -12,8 +12,8 @@ It is **not** a hand-picked 300–500 image gallery. Source records can grow to 
 - **Provenance-first detail view** — one artwork can expose multiple museum/source records and their rights status.
 - **Search filters** — source, year range, images only and public-domain only.
 - **Sync history** — each ingestion run records success/error and processed count.
-- **Public deployment readiness** — configurable persistent database path, Dockerfile and health endpoint.
-- **Render deployment template** — `render.yaml` mounts a persistent disk and checks `/api/health`.
+- **Free public beta** — GitHub Actions synchronizes a bounded real-data snapshot and publishes a rights-aware static site to GitHub Pages.
+- **Optional dynamic deployment** — configurable persistent database path, Dockerfile, health endpoint and a paid Render disk template.
 - **Open-source readiness** — MIT license for code, contribution guide, connector contract, data-rights policy and GitHub Actions CI/source smoke checks.
 
 ## Connected artwork sources
@@ -103,7 +103,9 @@ V0.5 merges automatically only with strong evidence: a shared Wikidata QID or no
 
 ## Deploy
 
-The app can run as a containerized public service. For a persistent deployed database set:
+The zero-cost beta uses GitHub Pages. The `Publish free beta` workflow builds an isolated SQLite database, synchronizes up to 200 records per source, exports a static snapshot and refreshes it weekly. The Python API is not running on Pages; search and filters use the bounded snapshot in the browser. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+For an optional containerized dynamic service with a persistent database, set:
 
 ```text
 VISUAL_WORLD_DB_PATH=/data/visual_world.db
@@ -111,9 +113,9 @@ HOST=0.0.0.0
 PORT=<platform-provided-port>
 ```
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). The V1 production target moves the same logical model to Postgres plus a dedicated faceted search service once the public corpus outgrows a single SQLite volume.
+The V1 production target moves the same logical model to Postgres plus a dedicated faceted search service once the public corpus outgrows a single SQLite volume.
 
-The scheduled GitHub source check probes connectors against disposable databases; it does not refresh the hosted SQLite database.
+The scheduled GitHub source check probes connectors against disposable databases; the separate Pages workflow builds and publishes the public snapshot. Neither updates an optional hosted SQLite database.
 
 ## Open-source project structure
 
@@ -124,9 +126,10 @@ schema.py            Database schema + source registry
 canonicalize.py      Cross-source canonical entity builder
 sync.py              Full/incremental ingestion runner
 server.py            Search/detail/public API
+export_static.py     Rights-aware Pages snapshot exporter
 source_registry.csv  Source roadmap and rights strategy
 docs/                Architecture, rights and deployment docs
-.github/workflows/   CI, source health and container checks
+.github/workflows/   CI, source health, Pages publication and container checks
 tests/               Core invariants
 ```
 
