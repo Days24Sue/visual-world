@@ -112,3 +112,71 @@ test('compressed text index skips unrelated chunks and is reused across searches
     assert.deepEqual((await client('/api/search?q=日本')).items.map(a => a.id), [2]);
     assert.equal(calls.filter(url => url.endsWith('search.json.gz')).length, 1);
 });
+
+function indexedFixture(fetchOverride) {
+    const { gzipSync } = require('node:zlib');
+    const cards = [
+        { id: 1, title: 'A landscape', artist_ids: ['monet'], year_start: 1888, year_end: 1888, style_ids: ['impressionism'], subject_ids: ['landscape'], kind_ids: ['kind-painting'], image_url: 'https://example.com/1.jpg', detail_path: 'data/details-0.json' },
+        { id: 2, title: 'B painting', artist_ids: ['monet'], year_start: 1901, year_end: 1901, style_ids: [], subject_ids: [], kind_ids: ['kind-painting'], image_url: 'https://example.com/2.jpg', detail_path: 'data/details-1.json' },
+        { id: 3, title: 'C undated', artist_ids: ['other'], year_start: null, year_end: null, style_ids: [], subject_ids: [], kind_ids: [], image_url: 'https://example.com/3.jpg', detail_path: 'data/details-1.json' },
+    ];
+    const index = cards.map((card, i) => [i ? 1 : 0, i === 0 ? 'Claude Monet 莫奈 风景 印象派' : i === 1 ? 'Claude Monet 莫奈' : 'Other 未署名', card.id, card.artist_ids, card.year_start, card.year_end, card.style_ids, card.subject_ids, card.kind_ids, 'nga', card.title]);
+    const manifest = { version: 2, search_index_version: 2, search_index_url: 'data/search.json.gz', explore_url: 'data/explore.json', chunks: [
+        { url: 'data/index-0.json', details_url: 'data/details-0.json', min_id: 1, max_id: 1 },
+        { url: 'data/index-1.json', details_url: 'data/details-1.json', min_id: 2, max_id: 3 },
+    ] };
+    const calls = [];
+    const client = createClient('./snapshot.json', async url => {
+        calls.push(url);
+        const override = fetchOverride?.(url);
+        if (override) return override;
+        if (url === './snapshot.json') return { ok: true, json: async () => manifest };
+        if (url.endsWith('search.json.gz')) return { ok: true, arrayBuffer: async () => gzipSync(JSON.stringify(index)) };
+        if (url.endsWith('explore.json')) return { ok: true, json: async () => ({ artists: [{ id: 'monet' }] }) };
+        if (url.endsWith('index-0.json')) return { ok: true, json: async () => cards.slice(0, 1) };
+        if (url.endsWith('index-1.json')) return { ok: true, json: async () => cards.slice(1) };
+        if (url.endsWith('details-0.json')) return { ok: true, json: async () => ({ 1: { artwork: cards[0] } }) };
+        throw new Error(`Unexpected fetch ${url}`);
+    });
+    return { client, calls };
+}
+
+test('complete index combines Chinese names, artist, period, style, subject and kind with exact counts', async () => {
+    const { client, calls } = indexedFixture();
+    const result = await client('/api/search?q=莫奈&artist=monet&year_from=1800&year_to=1899&style=impressionism&subject=landscape&kind=kind-painting');
+    assert.equal(result.total, 1);
+    assert.deepEqual(result.items.map(item => item.id), [1]);
+    assert.deepEqual(result.artist_counts, [{ id: 'monet', count: 1 }]);
+    assert.ok(!calls.some(url => url.endsWith('index-1.json')), 'Only shards needed for this page should load');
+    assert.equal((await client('/api/search?artist=missing')).total, 0);
+    assert.equal((await client('/api/search?year_from=1900&year_to=1800')).total, 0);
+    assert.equal((await client('/api/search?q=!!!')).total, 0);
+    assert.equal((await client('/api/artwork?id=1')).artwork.id, 1);
+});
+
+test('complete index sorts globally and paginates across shards without treating missing dates as year zero', async () => {
+    const { client, calls } = indexedFixture();
+    const result = await client('/api/search?sort=newest&limit=1');
+    assert.equal(result.total, 3);
+    assert.deepEqual(result.items.map(item => item.id), [2]);
+    assert.deepEqual((await client('/api/search?sort=newest&limit=1&offset=1')).items.map(item => item.id), [1]);
+    assert.deepEqual((await client('/api/search?sort=newest&limit=1&offset=2')).items.map(item => item.id), [3]);
+    assert.deepEqual((await client('/api/search?sort=oldest')).items.map(item => item.id), [1, 2, 3]);
+    assert.deepEqual((await client('/api/search?sort=title')).items.map(item => item.id), [1, 2, 3]);
+    assert.equal(calls.filter(url => url.endsWith('search.json.gz')).length, 1);
+    assert.equal((await client('/api/explore')).artists[0].id, 'monet');
+    await client('/api/explore');
+    assert.equal(calls.filter(url => url.endsWith('explore.json')).length, 1);
+});
+
+test('cancelled indexed searches stop before downloading page images and failed page shards can retry', async () => {
+    let fail = true;
+    const { client, calls } = indexedFixture(url => {
+        if (url.endsWith('index-0.json') && fail) { fail = false; return { ok: false, status: 503 }; }
+    });
+    const controller = new AbortController(); controller.abort();
+    await assert.rejects(client('/api/search?artist=monet', { signal: controller.signal }), { name: 'AbortError' });
+    assert.ok(!calls.some(url => url.endsWith('index-0.json')));
+    await assert.rejects(client('/api/search?artist=monet'), /503/);
+    assert.equal((await client('/api/search?artist=monet')).total, 2);
+});

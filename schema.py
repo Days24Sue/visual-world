@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS artworks (
   title_original TEXT,
   artist TEXT,
   artist_id TEXT,
+  artist_names TEXT,
   date_display TEXT,
   year_start INTEGER,
   year_end INTEGER,
@@ -139,6 +140,39 @@ CREATE INDEX IF NOT EXISTS idx_canonical_classification ON canonical_artworks(cl
 CREATE INDEX IF NOT EXISTS idx_canonical_public_domain ON canonical_artworks(public_domain);
 CREATE INDEX IF NOT EXISTS idx_canonical_members_source ON canonical_members(source_id);
 
+CREATE TABLE IF NOT EXISTS artist_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_zh TEXT,
+  aliases TEXT NOT NULL DEFAULT '[]',
+  birth_year INTEGER,
+  death_year INTEGER,
+  nationality TEXT,
+  movements TEXT NOT NULL DEFAULT '[]',
+  info_source TEXT
+);
+CREATE TABLE IF NOT EXISTS canonical_artists (
+  canonical_id INTEGER NOT NULL REFERENCES canonical_artworks(id) ON DELETE CASCADE,
+  artist_id TEXT NOT NULL REFERENCES artist_profiles(id),
+  PRIMARY KEY(canonical_id,artist_id)
+);
+CREATE INDEX IF NOT EXISTS idx_canonical_artists_artist ON canonical_artists(artist_id,canonical_id);
+CREATE TABLE IF NOT EXISTS taxonomy_terms (
+  id TEXT PRIMARY KEY,
+  dimension TEXT NOT NULL,
+  label TEXT NOT NULL,
+  label_zh TEXT
+);
+CREATE TABLE IF NOT EXISTS canonical_terms (
+  canonical_id INTEGER NOT NULL REFERENCES canonical_artworks(id) ON DELETE CASCADE,
+  term_id TEXT NOT NULL REFERENCES taxonomy_terms(id),
+  PRIMARY KEY(canonical_id,term_id)
+);
+CREATE INDEX IF NOT EXISTS idx_canonical_terms_term ON canonical_terms(term_id,canonical_id);
+CREATE VIRTUAL TABLE IF NOT EXISTS exploration_fts USING fts5(
+  search_text, tokenize='unicode61 remove_diacritics 2'
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS canonical_fts USING fts5(
   title, artist, date_display, country, culture, classification, medium, style, subjects, tags, description,
   content='canonical_artworks', content_rowid='id', tokenize='unicode61 remove_diacritics 2'
@@ -220,6 +254,9 @@ def _migrate(conn):
     cols={r['name'] for r in conn.execute('PRAGMA table_info(sources)').fetchall()}
     if 'resource_count' not in cols:
         conn.execute('ALTER TABLE sources ADD COLUMN resource_count INTEGER NOT NULL DEFAULT 0')
+    artwork_cols={r['name'] for r in conn.execute('PRAGMA table_info(artworks)')}
+    if 'artist_names' not in artwork_cols:
+        conn.execute('ALTER TABLE artworks ADD COLUMN artist_names TEXT')
 
 
 def init_db(path=DB_PATH):

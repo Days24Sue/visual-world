@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from schema import DB_PATH
+from exploration import artwork_dimensions, catalog, rebuild as rebuild_exploration, search_text
 
 WEB = Path(__file__).parent / 'web'
 DISPLAYABLE = "coalesce(nullif(c.thumbnail_url,''),nullif(c.image_url,'')) IS NOT NULL"
@@ -16,7 +17,7 @@ SEARCH_FIELDS = ('title', 'artist', 'date_display', 'country', 'culture',
                  'classification', 'medium', 'style', 'subjects', 'tags', 'description')
 CARD_FIELDS = ('id', 'title', 'artist', 'date_display', 'medium', 'classification',
                'year_start', 'year_end', 'public_domain', 'source_ids', 'source_count',
-               'image_url', 'thumbnail_url')
+               'image_url', 'thumbnail_url', 'style', 'subjects')
 
 
 def write_json(path, value):
@@ -34,10 +35,11 @@ def public_stats(conn):
     raw = conn.execute('SELECT count(*) FROM artworks').fetchone()[0]
     canonical_total = conn.execute('SELECT count(*) FROM canonical_artworks').fetchone()[0]
     visible = conn.execute(f'SELECT count(*) FROM canonical_artworks c WHERE {DISPLAYABLE}').fetchone()[0]
+    profile_count = conn.execute('SELECT count(*) FROM artist_profiles').fetchone()[0]
     return {
         'total': raw, 'canonical': visible, 'images': visible,
         'duplicates': max(0, raw - canonical_total),
-        'artists': conn.execute(f"SELECT count(DISTINCT artist) FROM canonical_artworks c WHERE {DISPLAYABLE} AND coalesce(artist,'')<>''").fetchone()[0],
+        'artists': profile_count or conn.execute(f"SELECT count(DISTINCT artist) FROM canonical_artworks c WHERE {DISPLAYABLE} AND coalesce(artist,'')<>''").fetchone()[0],
         'resources': conn.execute('SELECT count(*) FROM resources').fetchone()[0],
         'sources': [source for source in sources if source['visible_count'] or source['resource_count']],
         'snapshot_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
@@ -74,10 +76,16 @@ def export_site(db_path, output, chunk_size=500):
     marker = "snapshotUrl: ''"
     if config.count(marker) != 1:
         raise ValueError('web/config.js must contain one empty snapshotUrl')
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    from schema import init_db
+    conn = init_db(db_path)
     try:
+        if not conn.execute('SELECT 1 FROM artist_profiles LIMIT 1').fetchone():
+            rebuild_exploration(conn)
         stats = public_stats(conn)
+        exploration = catalog(conn)
+        dimensions = artwork_dimensions(conn)
+        artists = {artist['id']: artist for artist in exploration['artists']}
+        taxonomy = {term['id']: term for dimension in ('styles', 'subjects', 'kinds') for term in exploration[dimension]}
         if not stats['canonical']:
             raise ValueError('No canonical artworks with displayable images to publish; run sync.py first')
         shutil.copytree(WEB, output)
@@ -85,7 +93,9 @@ def export_site(db_path, output, chunk_size=500):
         (output / 'config.js').write_text(config.replace(marker, "snapshotUrl: './snapshot.json'"))
         resources = [dict(row) for row in conn.execute('SELECT * FROM resources ORDER BY category,name')]
         manifest = {'version': 2, 'generated_at': stats['snapshot_at'], 'stats': stats,
-                    'resources': resources, 'chunks': [], 'search_index_url': 'data/search.json.gz'}
+                    'resources': resources, 'chunks': [], 'search_index_url': 'data/search.json.gz',
+                    'search_index_version': 2, 'explore_url': 'data/explore.json'}
+        write_json(output / manifest['explore_url'], exploration)
         cursor = conn.execute(f'''SELECT c.* FROM canonical_artworks c WHERE {DISPLAYABLE}
             ORDER BY c.source_count DESC,c.id DESC''')
         search_index = gzip.open(output / manifest['search_index_url'], 'wt', encoding='utf-8')
@@ -98,15 +108,20 @@ def export_site(db_path, output, chunk_size=500):
             for row in batch:
                 artwork = dict(row)
                 card = {field: artwork[field] for field in CARD_FIELDS}
-                card['search_text'] = ' '.join(str(artwork[field] or '') for field in SEARCH_FIELDS)
+                card.update(dimensions[artwork['id']])
+                card['search_text'] = search_text(artwork, dimensions[artwork['id']], artists, taxonomy)
                 if not first_search_row:
                     search_index.write(',')
-                json.dump([number, card['search_text']], search_index, ensure_ascii=False, separators=(',', ':'))
+                json.dump([number, card['search_text'], card['id'], card['artist_ids'],
+                           artwork['year_start'], artwork['year_end'], card['style_ids'],
+                           card['subject_ids'], card['kind_ids'], artwork['source_ids'], artwork['title']],
+                          search_index, ensure_ascii=False, separators=(',', ':'))
                 first_search_row = False
                 card['detail_path'] = detail_path
                 cards.append(card)
                 source_ids.update((artwork['source_ids'] or '').split('|'))
                 detail = detail_for(conn, artwork)
+                detail['artwork'].update(dimensions[artwork['id']])
                 card['image_alternatives'] = list(dict.fromkeys(
                     url for member in detail['sources'] if member['public_domain'] == 1
                     for url in (member['thumbnail_url'], member['image_url']) if url))

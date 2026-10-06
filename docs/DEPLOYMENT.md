@@ -6,7 +6,7 @@ The public repository uses `.github/workflows/pages.yml` to build a fresh, isola
 
 1. In repository Settings → Pages, select **GitHub Actions** as the build and deployment source.
 2. Run **Publish free beta** from Actions, or push a change to `main`. The workflow keeps the old site live if a connector or export fails.
-3. Open [the Pages site](https://days24sue.github.io/visual-world/) and verify search, source/year/public-domain/image filters, artwork details, original record links and rights text.
+3. Open [the Pages site](https://days24sue.github.io/visual-world/) and verify search, artist/period/style/subject/type filters, result counts and sorting, artwork details, original record links and rights text.
 
 For a local preview using an existing synchronized database:
 
@@ -15,7 +15,7 @@ python export_static.py --output dist
 python -m http.server 8788 --directory dist
 ```
 
-`dist/` is ignored by Git. Remove it before rebuilding locally. Pages has no live Python API or persistent SQLite database: search runs in the browser against the complete exported image collection, and freshness depends on a successful weekly workflow run. Browsing loads only the required index shards; detail shards load on click. The first text search loads a compressed text-only index, then reads candidate shards. The shard cache is bounded; browsers without `DecompressionStream` fall back to scanning shards. This is a periodically refreshed full collection, not a real-time service. Works with no open image URL are excluded. Images that fail to load are retried with the alternate size and then hidden.
+`dist/` is ignored by Git. Remove it before rebuilding locally. Pages has no live Python API or persistent SQLite database: search runs in the browser against the complete exported image collection, and freshness depends on a successful weekly workflow run. Browsing loads only the required index shards; detail shards load on click. The first artwork search loads a compressed full-collection index, computes exact matches and counts, then reads only the shards needed for the requested page. Artist and category directories load separately. The shard cache is bounded; the V0.6 indexed experience requires a modern browser supporting `DecompressionStream`. Artist biography supplements are refreshed from PainterPalette during public collection sync. This is a periodically refreshed full collection, not a real-time service. Works with no open image URL are excluded. Images that fail to load are retried with the alternate size and then hidden.
 
 ## Optional paid Render service
 

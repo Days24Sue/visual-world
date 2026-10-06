@@ -1,7 +1,10 @@
-import csv, io, json, time, urllib.error, urllib.request
+import csv, html, io, json, re, time, urllib.error, urllib.request
 from datetime import datetime, timezone
 
 UA = 'VisualWorld/0.2 (+personal research visual index)'
+
+def plain_text(value):
+    return html.unescape(re.sub(r'<[^>]+>', ' ', str(value or ''))).strip()
 
 def http_response(url, timeout=90):
     req = urllib.request.Request(url, headers={'User-Agent': UA})
@@ -107,7 +110,7 @@ def joinish(v):
 
 def upsert(conn, row):
     cols = [
-      'canonical_key','source_id','source_object_id','title','title_original','artist','artist_id',
+      'canonical_key','source_id','source_object_id','title','title_original','artist','artist_id','artist_names',
       'date_display','year_start','year_end','country','culture','department','classification','medium',
       'dimensions','style','subjects','tags','description','image_url','thumbnail_url','image_width','image_height',
       'object_url','accession_number','wikidata_qid','metadata_license','image_license','public_domain',

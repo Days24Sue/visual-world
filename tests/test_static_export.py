@@ -79,6 +79,10 @@ class StaticExportTests(unittest.TestCase):
         self.assertEqual(len(index), 7)
         self.assertEqual({row[0] for row in index}, {0, 1, 2})
         self.assertTrue(all('Image' in row[1] for row in index))
+        self.assertEqual(manifest['search_index_version'], 2)
+        self.assertEqual(len(index[0]), 11)
+        self.assertEqual({row[2] for row in index}, ids)
+        self.assertTrue((self.output / manifest['explore_url']).exists())
 
     def test_empty_database_is_not_published(self):
         with self.assertRaisesRegex(ValueError, 'No canonical artworks'):

@@ -109,6 +109,19 @@ class ConnectorRightsTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'media unavailable'):
                 walters.sync(self.conn, limit=1)
 
+    def test_artic_keeps_structured_creator_and_source_taxonomy(self):
+        from connectors import artic
+        record = {'id': 1, 'artist_id': 7, 'artist_titles': ['Claude Monet'],
+                  'style_titles': ['Impressionism'], 'subject_titles': ['landscape'],
+                  'term_titles': ['oil painting'], 'description': '<p>A <em>landscape</em>.</p>'}
+        with patch.object(artic, '_records', return_value=iter([(record, 'https://example.com/iiif')])):
+            artic.sync(self.conn)
+        row = self.conn.execute('SELECT * FROM artworks').fetchone()
+        self.assertEqual(json.loads(row['artist_names']), ['Claude Monet'])
+        self.assertEqual(row['artist_id'], '7')
+        self.assertEqual((row['style'], row['subjects'], row['tags']), ('Impressionism', 'landscape', 'oil painting'))
+        self.assertNotIn('<', row['description'])
+
 
 if __name__ == '__main__':
     unittest.main()

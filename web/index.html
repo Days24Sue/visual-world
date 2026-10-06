@@ -1,13 +1,57 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Visual World — an open visual culture index across museums, art collections and illustration resources."><title>Visual World — 世界视觉库</title><link rel="stylesheet" href="./styles.css"></head><body>
-<header class="top"><a class="brand" href="#"><span class="mark">VW</span><span>Visual World</span></a><nav><button class="nav active" data-mode="works">作品库</button><button class="nav" data-mode="resources">资源库</button><button class="nav" data-mode="sources">数据源</button></nav><a id="githubLink" class="github-link hidden" target="_blank" rel="noopener">GitHub ↗</a><span class="version">V0.5</span></header>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="探索世界艺术：按画家、时期、流派和主题，检索完整开放馆藏。">
+  <title>Visual World · 世界艺术探索馆</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#home"><span class="mark">VW</span><span>世界艺术探索馆<small>VISUAL WORLD</small></span></a>
+  <nav aria-label="主要导航">
+    <a href="#home" data-view="home">首页</a><a href="#artists" data-view="artists">画家</a>
+    <a href="#periods" data-view="periods">时期</a><a href="#styles" data-view="styles">流派</a>
+    <a href="#subjects" data-view="subjects">主题</a><a href="#works" data-view="works">全部作品</a>
+  </nav>
+</header>
 <main>
-<section class="hero"><p class="eyebrow">OPEN VISUAL CULTURE INDEX · 世界视觉库</p><h1>把世界的视觉资源，<br><em>汇到同一个入口。</em></h1><p class="sub">历史名画、现代与当代艺术、设计收藏、插画资源站与开放数据。跨来源聚合、保留出处与版权边界，并逐步把重复作品合并为同一个视觉实体。</p>
-<div class="search"><span>⌕</span><input id="q" placeholder="搜索 Monet、海报、Editorial Illustration、Japan、collage…"><button id="go">Search</button></div>
-<div class="chips" id="chips"><button data-q="painting">Painting</button><button data-q="impressionism">Impressionism</button><button data-q="poster">Poster</button><button data-q="illustration">Illustration</button><button data-q="design">Design</button><button data-q="Japan">Japanese</button></div></section>
-<section class="stats"><div><strong id="canonical">—</strong><span>可看作品</span></div><div><strong id="total">—</strong><span>来源记录</span></div><div><strong id="artists">—</strong><span>艺术家</span></div><div><strong id="images">—</strong><span>可展示图像</span></div><div><strong id="resourceN">—</strong><span>资源链接</span></div><div><strong id="sourceN">—</strong><span>数据源</span></div></section>
-<section class="workspace"><aside><p class="aside-title" id="sourceLabel">ARTWORK SOURCES</p><div id="sources"></div><hr><div id="workFilters"><p class="aside-title">FILTER</p><label><input type="checkbox" id="publicDomain"> Public Domain</label><div class="year-filter"><input id="yearFrom" inputmode="numeric" placeholder="From year"><span>—</span><input id="yearTo" inputmode="numeric" placeholder="To year"></div><button id="applyFilters" class="filter-btn">Apply filters</button></div><p class="hint" id="hint">只展示有公开图片的作品，点击即可查看。三个博物馆全量导入，按需加载。</p></aside>
-<div class="content"><div class="section-head"><div><p class="eyebrow" id="modeEyebrow">DISCOVER · ARTWORKS</p><h2 id="resultTitle">All works</h2></div></div><div id="grid" class="grid"></div><div id="resourceGrid" class="resource-grid hidden"></div><div id="sourceGrid" class="source-grid hidden"></div><p id="resultStatus" class="result-status" role="status" aria-live="polite"></p><button id="more" class="more">Load more</button></div></section>
-<section class="architecture"><p class="eyebrow">OPEN ARCHITECTURE</p><h2>来源可以不断增加，作品身份保持统一。</h2><div class="flow"><span>Museums / GitHub / APIs / OAI-PMH / NDJSON</span><b>→</b><span>Normalize</span><b>→</b><span>Canonicalize</span><b>→</b><span>Search</span><b>→</b><span>Visual World</span></div></section>
-</main><footer>Visual World · Open-source visual research index · Metadata and image rights remain governed by each source.<span id="snapshotNote"></span></footer>
-<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Artwork details"><button id="closeModal" class="modal-close">×</button><div id="modalBody" class="modal-body"></div></div>
-<script src="./config.js"></script><script src="./static_api.js"></script><script src="./app.js"></script></body></html>
+  <section class="search-bar" aria-label="搜索作品与画家">
+    <form id="searchForm" class="search"><label class="sr-only" for="q">搜索画家、作品或内容</label><input id="q" type="search" placeholder="搜索画家、作品或内容，例如：莫奈、Picasso、风景" autocomplete="off"><button type="submit">搜索</button></form>
+    <div id="suggestions" class="suggestions hidden" aria-label="匹配的画家"></div>
+  </section>
+  <section id="home" class="hidden"></section>
+  <section id="directory" class="directory hidden" aria-labelledby="directoryTitle">
+    <div class="directory-head"><p class="eyebrow" id="directoryEyebrow"></p><h1 id="directoryTitle"></h1><p id="directoryIntro" class="sub"></p></div>
+    <div class="directory-controls"><label><span id="directorySearchLabel">查找</span><input id="directorySearch" type="search" placeholder="输入名字或关键词"></label><label id="directorySortLabel">排序<select id="directorySort"><option value="count">常见名称优先</option><option value="name">名称顺序</option><option value="time">出生年代</option></select></label></div>
+    <p id="directoryStatus" role="status" class="muted"></p><div id="directoryGrid"></div><button id="directoryMore" class="more">查看更多</button>
+  </section>
+  <section id="library" class="library hidden" aria-labelledby="resultTitle">
+    <div id="profile" class="profile hidden"></div>
+    <div class="library-head"><div><p class="eyebrow">THE COLLECTION · 作品库</p><h1 id="resultTitle">全部作品</h1><p id="resultCount" class="muted"></p></div><a href="#works" id="clearFilters" class="text-link">清除筛选</a></div>
+    <div class="workspace">
+      <aside aria-label="作品筛选">
+        <form id="filterForm">
+          <label>画家 / 创作者<input id="artistLookup" type="search" placeholder="输入中文名或原名" autocomplete="off"><select id="artistFilter" aria-label="选择画家"><option value="">全部创作者</option></select></label>
+          <label>时期<select id="periodFilter"><option value="">全部时期</option></select></label>
+          <fieldset><legend>自定义创作年代</legend><div class="year-filter"><input id="yearFrom" type="number" aria-label="起始年份" placeholder="起始年"><span>至</span><input id="yearTo" type="number" aria-label="结束年份" placeholder="结束年"></div></fieldset>
+          <label>风格与流派<select id="styleFilter"><option value="">全部流派</option></select></label>
+          <label>内容主题<select id="subjectFilter"><option value="">全部主题</option></select></label>
+          <label>作品类型<select id="kindFilter"><option value="">全部类型</option></select></label>
+          <label>排序<select id="sortFilter"><option value="relevance">默认顺序</option><option value="oldest">创作年代：从早到晚</option><option value="newest">创作年代：从晚到早</option><option value="title">作品名称顺序</option></select></label>
+          <button type="submit" class="filter-btn">应用筛选</button>
+        </form>
+        <p class="hint">只展示有公开图片的作品。时期按作品创作年代筛选，流派与主题使用馆藏已有标签。</p>
+        <div id="relatedArtists" class="related-artists"></div>
+      </aside>
+      <div class="content"><div id="activeFilters" class="active-filters"></div><p id="resultStatus" class="result-status" role="status" aria-live="polite"></p><div id="grid" class="grid"></div><button id="more" class="more">加载更多作品</button></div>
+    </div>
+  </section>
+  <p id="appStatus" class="app-status" role="status" aria-live="polite">正在整理探索目录…</p>
+</main>
+<footer><div><b>Visual World · 世界艺术探索馆</b><p>从一个名字、一段时期或一个主题，找到想看的艺术。</p></div><p id="snapshotNote">馆藏图像与文字的权利信息见作品详情。</p></footer>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="作品详情"><button id="closeModal" class="modal-close" aria-label="关闭作品详情">×</button><div id="modalBody" class="modal-body"></div></div>
+<script src="./config.js"></script><script src="./static_api.js"></script><script src="./app.js"></script>
+</body>
+</html>

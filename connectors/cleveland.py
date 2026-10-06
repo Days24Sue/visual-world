@@ -1,3 +1,4 @@
+import json
 from .common import http_json, stream_json_array, clean_int, joinish, upsert
 BASE='https://openaccess-api.clevelandart.org/api/artworks/'
 BULK_URL='https://media.githubusercontent.com/media/ClevelandMuseumArt/openaccess/master/data.json'
@@ -37,9 +38,10 @@ def sync(conn, limit=None):
         open_image=str(r.get('share_license_status') or '').upper()=='CC0'
         row={
           'canonical_key':f'cleveland:{oid}','source_id':'cleveland','source_object_id':oid,'title':r.get('title'),'artist':artist,
+          'artist_names':json.dumps([c.get('description','').split(' (')[0] for c in creators if isinstance(c,dict)],ensure_ascii=False),
           'date_display':r.get('creation_date'),'year_start':clean_int(r.get('creation_date_earliest')),'year_end':clean_int(r.get('creation_date_latest')),
           'culture':joinish(r.get('culture')),'department':r.get('department'),'classification':r.get('type'),'medium':r.get('technique'),'dimensions':joinish(r.get('measurements')),
-          'subjects':joinish(r.get('fun_fact')),'description':r.get('description'),'image_url':image if open_image else None,'thumbnail_url':thumb.get('url') if open_image and isinstance(thumb,dict) else None,
+          'description':r.get('description'),'image_url':image if open_image else None,'thumbnail_url':thumb.get('url') if open_image and isinstance(thumb,dict) else None,
           'object_url':r.get('url'),'accession_number':r.get('accession_number'),'wikidata_qid':r.get('wikidata_id'),'metadata_license':'CC0','image_license':'CC0' if open_image else 'Image use restricted or unverified',
           'public_domain':1 if open_image else 0,'rights_note':r.get('copyright')
         }

@@ -1,10 +1,10 @@
 import json
 import tarfile
 from pathlib import PurePosixPath
-from .common import http_json, http_response, clean_int, upsert
+from .common import http_json, http_response, clean_int, joinish, plain_text, upsert
 BASE='https://api.artic.edu/api/v1/artworks'
 BULK_URL='https://artic-api-data.s3.amazonaws.com/artic-api-data.tar.bz2'
-FIELDS='id,title,artist_display,date_display,date_start,date_end,place_of_origin,department_title,artwork_type_title,medium_display,dimensions,image_id,is_public_domain,copyright_notice,main_reference_number,api_link'
+FIELDS='id,title,artist_display,artist_id,artist_title,artist_titles,date_display,date_start,date_end,place_of_origin,department_title,artwork_type_title,medium_display,dimensions,style_titles,subject_titles,term_titles,description,image_id,is_public_domain,copyright_notice,main_reference_number,api_link'
 
 def _records(limit):
     if limit is None:
@@ -41,8 +41,11 @@ def sync(conn, limit=None):
         oid=str(r['id'])
         row={
           'canonical_key':f'artic:{oid}','source_id':'artic','source_object_id':oid,'title':r.get('title'),'artist':r.get('artist_display'),
+          'artist_id':str(r['artist_id']) if r.get('artist_id') else None,
+          'artist_names':json.dumps(r.get('artist_titles') or ([r['artist_title']] if r.get('artist_title') else []),ensure_ascii=False),
           'date_display':r.get('date_display'),'year_start':clean_int(r.get('date_start')),'year_end':clean_int(r.get('date_end')),'country':r.get('place_of_origin'),
           'department':r.get('department_title'),'classification':r.get('artwork_type_title'),'medium':r.get('medium_display'),'dimensions':r.get('dimensions'),
+          'style':joinish(r.get('style_titles')),'subjects':joinish(r.get('subject_titles')),'tags':joinish(r.get('term_titles')),'description':plain_text(r.get('description')) or None,
           'image_url':img,'thumbnail_url':thumb,'object_url':f'https://www.artic.edu/artworks/{oid}','accession_number':r.get('main_reference_number'),
           'metadata_license':'CC0 except noted description fields','image_license':'Public-domain image' if open_image else 'Image use restricted or unverified','public_domain':1 if open_image else 0,
           'rights_note':r.get('copyright_notice')

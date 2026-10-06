@@ -39,6 +39,8 @@ def main():
     from canonicalize import rebuild
     groups, raw = rebuild(conn)
     print(f'Canonical index: {groups:,} works from {raw:,} source records.')
+    from exploration import rebuild as rebuild_exploration
+    print('Exploration index:', rebuild_exploration(conn, download=any(name in PUBLIC_IDS for name in selected)))
     total=conn.execute('select count(*) from artworks').fetchone()[0]
     resources=conn.execute('select count(*) from resources').fetchone()[0]
     print(f'\nDatabase now contains {total:,} artwork records and {resources:,} indexed resources.')
