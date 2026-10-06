@@ -6,14 +6,16 @@ from connectors import CONNECTORS
 from connectors.common import now_iso
 
 RESOURCE_IDS={'awesome_illustrations','design_resources','art_datasets'}
+PUBLIC_IDS=('nga','cleveland','artic')
 
 def main():
     p=argparse.ArgumentParser(description='Visual World full collection synchronizer')
-    p.add_argument('--source', choices=list(CONNECTORS)+['all','artworks','resources'], default='all')
+    p.add_argument('--source', choices=list(CONNECTORS)+['all','artworks','resources','public'], default='public')
     p.add_argument('--limit', type=int, default=None, help='Per-source record cap. Omit for full sync.')
     args=p.parse_args()
     conn=init_db()
     if args.source=='all': selected=list(CONNECTORS)
+    elif args.source=='public': selected=list(PUBLIC_IDS)
     elif args.source=='artworks': selected=[x for x in CONNECTORS if x not in RESOURCE_IDS]
     elif args.source=='resources': selected=[x for x in CONNECTORS if x in RESOURCE_IDS]
     else: selected=[args.source]
@@ -28,7 +30,7 @@ def main():
             else:
                 conn.execute('''UPDATE sources SET last_sync=?,
                   record_count=(SELECT count(*) FROM artworks WHERE source_id=?),
-                  image_count=(SELECT count(*) FROM artworks WHERE source_id=? AND public_domain=1 AND coalesce(thumbnail_url,image_url) is not null)
+                  image_count=(SELECT count(*) FROM artworks WHERE source_id=? AND public_domain=1 AND coalesce(nullif(thumbnail_url,''),nullif(image_url,'')) is not null)
                   WHERE id=?''',(now_iso(),name,name,name))
             conn.execute('UPDATE sync_runs SET finished_at=?,status=?,processed=? WHERE id=?',(now_iso(),'ok',count or 0,run_id)); conn.commit(); print(f'{name}: {count} records processed')
         except Exception as e:

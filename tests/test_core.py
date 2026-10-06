@@ -80,6 +80,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(search(year_from=1800,year_to=1900)[0]['title'],'Open Painting')
         self.assertEqual(search(year_from=1900,year_to=1800),[])
         self.assertEqual(search(query='!!!'),[])
+        self.assertEqual([item['title'] for item in search()], ['Open Painting'])
+        self.assertEqual(search(source='moma'), [])
     def test_rights_do_not_infer_from_metadata(self):
         from connectors.common import upsert
         upsert(self.conn,{'source_id':'moma','source_object_id':'x','title':'Rights Test','metadata_license':'CC0','image_license':'Not included','public_domain':None})

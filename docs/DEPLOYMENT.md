@@ -2,7 +2,7 @@
 
 ## Free GitHub Pages beta
 
-The public repository uses `.github/workflows/pages.yml` to build a fresh, isolated SQLite database, synchronize up to 200 real records per source, export a rights-aware static snapshot, and deploy it to GitHub Pages. The workflow also runs weekly and can be started manually. The database and third-party image files are not committed or uploaded; only the static site and normalized metadata snapshot are published.
+The public repository uses `.github/workflows/pages.yml` to build a fresh, isolated SQLite database, fully synchronize NGA, Cleveland and Chicago (no `--limit`), export a rights-aware sharded collection, and deploy it to GitHub Pages. The workflow also runs weekly and can be started manually. The database and third-party image files are not committed or uploaded; only the static site and normalized metadata shards are published. Cleveland and Chicago are ingested from official bulk data dumps, not thousands of individual API requests.
 
 1. In repository Settings → Pages, select **GitHub Actions** as the build and deployment source.
 2. Run **Publish free beta** from Actions, or push a change to `main`. The workflow keeps the old site live if a connector or export fails.
@@ -15,7 +15,7 @@ python export_static.py --output dist
 python -m http.server 8788 --directory dist
 ```
 
-`dist/` is ignored by Git. Remove it before rebuilding locally. Pages has no live Python API or persistent SQLite database: search runs in the browser against the bounded snapshot, and freshness depends on a successful weekly workflow run. Do not describe it as a full real-time corpus.
+`dist/` is ignored by Git. Remove it before rebuilding locally. Pages has no live Python API or persistent SQLite database: search runs in the browser against the complete exported image collection, and freshness depends on a successful weekly workflow run. Browsing loads only the required index shards; detail shards load on click. The first text search loads a compressed text-only index, then reads candidate shards. The shard cache is bounded; browsers without `DecompressionStream` fall back to scanning shards. This is a periodically refreshed full collection, not a real-time service. Works with no open image URL are excluded. Images that fail to load are retried with the alternate size and then hidden.
 
 ## Optional paid Render service
 
@@ -26,7 +26,7 @@ python -m http.server 8788 --directory dist
 3. Open the running paid web service's Dashboard Shell. From `/app`, run the initial import on that same service instance:
 
    ```bash
-   python sync.py --source artworks
+   python sync.py --source public
    python sync.py --source resources
    ```
 

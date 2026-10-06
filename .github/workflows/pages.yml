@@ -13,6 +13,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -20,8 +21,10 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s tests
       - run: node --test tests/test_static_api.js
-      - name: Sync bounded public snapshot
-        run: python sync.py --source all --limit 200
+      - name: Sync full image collections
+        run: |
+          python -u sync.py --source public
+          python -u sync.py --source resources
         env:
           VISUAL_WORLD_DB_PATH: ${{ runner.temp }}/visual_world.db
       - name: Export static site

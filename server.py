@@ -4,6 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from schema import connect, init_db
 from canonicalize import rebuild as rebuild_canonical
+from export_static import public_stats
 
 ROOT=Path(__file__).parent
 WEB=ROOT/'web'
@@ -21,7 +22,7 @@ def as_int(q,key,default,minimum=None,maximum=None):
 
 def search_artworks(conn,query,source,kind,with_images,public_only,year_from,year_to,limit,offset):
     if year_from>year_to: return []
-    where=[]; args=[]
+    where=["coalesce(nullif(c.thumbnail_url,''),nullif(c.image_url,'')) IS NOT NULL"]; args=[]
     if source: where.append('EXISTS (SELECT 1 FROM canonical_members m WHERE m.canonical_id=c.id AND m.source_id=?)'); args.append(source)
     if kind: where.append('c.classification like ?'); args.append('%'+kind+'%')
     if with_images: where.append('coalesce(c.thumbnail_url,c.image_url) is not null')
@@ -38,7 +39,12 @@ def search_artworks(conn,query,source,kind,with_images,public_only,year_from,yea
         sql='SELECT c.* FROM canonical_artworks c'; params=[]
         if where: sql+=' WHERE '+' AND '.join(where); params=args
         sql+=' ORDER BY CASE WHEN coalesce(c.thumbnail_url,c.image_url) IS NOT NULL THEN 0 ELSE 1 END, c.source_count DESC, c.id DESC LIMIT ? OFFSET ?'; params += [limit,offset]
-    return rows(conn,sql,params)
+    items=rows(conn,sql,params)
+    for item in items:
+        images=conn.execute('''SELECT a.thumbnail_url,a.image_url FROM canonical_members m
+            JOIN artworks a ON a.id=m.artwork_id WHERE m.canonical_id=? AND a.public_domain=1''',(item['id'],))
+        item['image_alternatives']=list(dict.fromkeys(url for row in images for url in row if url))
+    return items
 
 class H(BaseHTTPRequestHandler):
     def send_json(self,obj,status=200):
@@ -50,13 +56,9 @@ class H(BaseHTTPRequestHandler):
             if path=='/api/health':
                 return self.send_json({'ok':True,'service':'visual-world','version':'0.5','artworks':conn.execute('select count(*) from artworks').fetchone()[0]})
             if path=='/api/stats':
-                total=conn.execute('select count(*) from artworks').fetchone()[0]
-                canonical=conn.execute('select count(*) from canonical_artworks').fetchone()[0]
-                imgs=conn.execute("select count(*) from artworks where public_domain=1 and coalesce(thumbnail_url,image_url) is not null").fetchone()[0]
-                artists=conn.execute("select count(distinct artist) from artworks where artist is not null and artist<>''").fetchone()[0]
-                resource_total=conn.execute('select count(*) from resources').fetchone()[0]
-                src=rows(conn,"""select s.*, (select r.status from sync_runs r where r.source_id=s.id order by r.id desc limit 1) last_status, (select r.error from sync_runs r where r.source_id=s.id order by r.id desc limit 1) last_error from sources s order by case when s.kind='resource_index' then 1 else 0 end, s.record_count desc, s.resource_count desc, s.name""")
-                return self.send_json({'total':total,'canonical':canonical,'duplicates':max(0,total-canonical),'images':imgs,'artists':artists,'resources':resource_total,'sources':src})
+                stats=public_stats(conn)
+                stats.pop('snapshot_at')
+                return self.send_json(stats)
             if path=='/api/search':
                 query=(q.get('q') or [''])[0].strip(); source=(q.get('source') or [''])[0]; kind=(q.get('kind') or [''])[0]
                 with_images=(q.get('with_images') or ['0'])[0]=='1'; public_only=(q.get('public_domain') or ['0'])[0]=='1'
@@ -66,7 +68,7 @@ class H(BaseHTTPRequestHandler):
                 return self.send_json({'items':items,'limit':limit,'offset':offset})
             if path=='/api/artwork':
                 cid=as_int(q,'id',0,0)
-                c=conn.execute('SELECT * FROM canonical_artworks WHERE id=?',(cid,)).fetchone()
+                c=conn.execute("SELECT * FROM canonical_artworks WHERE id=? AND coalesce(nullif(thumbnail_url,''),nullif(image_url,'')) IS NOT NULL",(cid,)).fetchone()
                 if not c: return self.send_json({'error':'not found'},404)
                 members=rows(conn,'''SELECT a.*, s.name source_name, s.homepage source_homepage FROM canonical_members m JOIN artworks a ON a.id=m.artwork_id JOIN sources s ON s.id=a.source_id WHERE m.canonical_id=? ORDER BY CASE WHEN coalesce(a.thumbnail_url,a.image_url) IS NOT NULL THEN 0 ELSE 1 END,a.source_id''',(cid,))
                 return self.send_json({'artwork':dict(c),'sources':members})

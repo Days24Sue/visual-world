@@ -2,9 +2,9 @@
 
 **Visual World** is an open visual-culture index designed to aggregate as much publicly indexable art, illustration and design material as possible across museums, open collections and resource directories.
 
-The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world), and the [free public beta](https://days24sue.github.io/visual-world/) is live as a periodically refreshed GitHub Pages snapshot. The original Python API and Docker deployment remain available for a future dynamic host.
+The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world), and the [free public beta](https://days24sue.github.io/visual-world/) is live as a periodically refreshed, sharded GitHub Pages collection. The original Python API and Docker deployment remain available for a future dynamic host.
 
-It is **not** a hand-picked image gallery. The canonical database can grow beyond the bounded free-site snapshot. GitHub Pages searches its exported snapshot in the browser, while a future dynamic host can serve a larger corpus through the existing API.
+It is **not** a hand-picked image gallery. The public artwork library contains only works with open image URLs. The three production sources (NGA, Cleveland and Chicago) are imported without a record cap. GitHub Pages loads small search and detail shards on demand; the existing Python API can serve the same collection dynamically. Metadata-only records remain internal and never appear as artwork cards.
 
 ## What V0.5 adds
 
@@ -12,7 +12,7 @@ It is **not** a hand-picked image gallery. The canonical database can grow beyon
 - **Provenance-first detail view** — one artwork can expose multiple museum/source records and their rights status.
 - **Search filters** — source, year range, images only and public-domain only.
 - **Sync history** — each ingestion run records success/error and processed count.
-- **Free public beta** — GitHub Actions synchronizes a bounded real-data snapshot and publishes a rights-aware static site to GitHub Pages.
+- **Free public beta** — GitHub Actions synchronizes complete image-capable collections and publishes a rights-aware static site to GitHub Pages.
 - **Optional dynamic deployment** — configurable persistent database path, Dockerfile, health endpoint and a paid Render disk template.
 - **Open-source readiness** — MIT license for code, contribution guide, connector contract, data-rights policy and GitHub Actions CI/source smoke checks.
 
@@ -58,8 +58,8 @@ The repository stores **code and metadata logic**, not mirrored multi-gigabyte t
 Mac users can double-click `START_MAC.command`, or run:
 
 ```bash
-python3 seed_demo.py
-python3 canonicalize.py
+python3 sync.py --source public
+python3 sync.py --source resources
 python3 server.py
 ```
 
@@ -68,13 +68,14 @@ Open `http://127.0.0.1:8787`.
 ## Full synchronization
 
 ```bash
-python3 sync.py --source all
+python3 sync.py --source public
+python3 sync.py --source resources
 ```
 
-Artwork sources only:
+The three production artwork sources only:
 
 ```bash
-python3 sync.py --source artworks
+python3 sync.py --source public
 ```
 
 Resource indexes only:
@@ -83,10 +84,12 @@ Resource indexes only:
 python3 sync.py --source resources
 ```
 
+The legacy `--source artworks` and `--source all` groups remain available for research; they also ingest metadata-only museums.
+
 For development only, cap each source:
 
 ```bash
-python3 sync.py --source all --limit 1000
+python3 sync.py --source public --limit 1000
 ```
 
 Omit `--limit` for a true full source sync.
@@ -103,7 +106,7 @@ V0.5 merges automatically only with strong evidence: a shared Wikidata QID or no
 
 ## Deploy
 
-The zero-cost beta uses GitHub Pages. The `Publish free beta` workflow builds an isolated SQLite database, synchronizes up to 200 records per source, exports a static snapshot and refreshes it weekly. The Python API is not running on Pages; search and filters use the bounded snapshot in the browser. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+The zero-cost public site uses GitHub Pages. The `Publish free beta` workflow builds an isolated SQLite database, fully synchronizes NGA, Cleveland and Chicago, and refreshes it weekly. Cleveland and Chicago use their official bulk dumps. Only artworks with open image URLs are exported. Search indexes and details are split into 500-work shards; opening the site does not download the entire collection. The Python API is not running on Pages; the first text search loads a compressed text index, then fetches only candidate shards. Browsers without gzip decompression support fall back to scanning shards. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 For an optional containerized dynamic service with a persistent database, set:
 
