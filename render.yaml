@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: visual-world
+    runtime: docker
+    plan: 1c-2g
+    healthCheckPath: /api/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: VISUAL_WORLD_DB_PATH
+        value: /data/visual_world.db
+    disk:
+      name: visual-world-data
+      mountPath: /data
+      sizeGB: 10

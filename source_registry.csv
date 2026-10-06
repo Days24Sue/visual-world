@@ -1,0 +1,24 @@
+priority,id,name,type,ingestion,status,image_strategy,rights_note
+P0,met,The Metropolitan Museum of Art,Museum,Bulk CSV,implemented,metadata-first; per-object image handling,Open Access metadata; image status differs by object
+P0,moma,Museum of Modern Art,Museum,Bulk CSV,implemented,metadata-only,Dataset CC0; images excluded
+P0,nga,National Gallery of Art,Museum,CSV join + IIIF,implemented,only published_images openaccess=1,NGA dataset CC0; open-access image flag enforced
+P0,artic,Art Institute of Chicago,Museum,REST API + IIIF,implemented,IIIF only when is_public_domain=true,API data largely CC0; object image status varies
+P0,cleveland,Cleveland Museum of Art,Museum,REST API,implemented,Open Access URLs where present,Open Access dataset and qualifying images CC0
+P0,rijks,Rijksmuseum,Museum,OAI-PMH + IIIF,implemented,EDM image URL + record rights,Record-specific rights
+P1,tate,Tate Collection,Museum snapshot,Bulk CSV,implemented,metadata/link-only,CC0 metadata snapshot from Oct 2014; images separate
+P1,whitney,Whitney Museum of American Art,Museum,Bulk CSV,implemented,metadata-only,CC0 metadata; images excluded
+P1,mplus,M+ Museum Hong Kong,Museum,Bulk CSV,implemented,metadata-only,CC0 metadata; images excluded
+P1,walters,Walters Art Museum,Museum,Static CSVs,implemented,join released media where available,Static data release is CC0
+P1,smithsonian,Smithsonian Open Access Art Units,Museum network,Public S3 NDJSON,implemented,CC0 media only,Art/design units by default; record-level rights
+P1,awesome_illustrations,Awesome Illustrations,Resource index,Markdown links,implemented,index-only,Destination licenses vary
+P1,design_resources,Design Resources,Resource index,Markdown links,implemented,index-only,Destination licenses vary
+P1,art_datasets,Art Datasets,Resource index,Markdown links,implemented,index-only,Dataset/image licenses vary
+P2,wellcome,Wellcome Collection,Museum/library,Daily NDJSON snapshot + IIIF,planned,open-image IIIF,Per-work/image licenses
+P2,artsmia,Minneapolis Institute of Art,Museum,GitHub JSON,planned,unrestricted/public-domain references only,Metadata CC0; image policy separate
+P2,getty,J. Paul Getty Museum,Museum,IIIF/open content,planned,Open Content Program assets,Metadata/image rights need per-item checks
+P2,smk,SMK National Gallery Denmark,Museum,REST + IIIF,planned,public-domain assets,Per-object rights
+P2,wikimedia,Wikimedia Commons + Wikidata,Open media graph,MediaWiki/Wikidata APIs,planned,license per file,Use as enrichment and dedup layer
+P2,europeana,Europeana,Aggregator,API,planned,rights per record,Federation layer rather than canonical image store
+P2,paris_musees,Paris Musées,Museum network,API,planned,free-use images when marked,Record-specific image status
+P3,3x3,3x3 Illustration,Illustration platform,index-only,planned,thumbnail/link-only,Modern illustration discovery; do not mirror protected assets
+P3,inspiration_grid,Inspiration Grid,Illustration/design platform,index-only,planned,thumbnail/link-only,Modern visual discovery; source attribution required

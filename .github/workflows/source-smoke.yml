@@ -1,0 +1,19 @@
+name: Source smoke check
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        source: [met, moma, nga, artic, cleveland, rijks, tate, whitney, mplus, walters, smithsonian, awesome_illustrations, design_resources, art_datasets]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python sync.py --source "${{ matrix.source }}" --limit 3
