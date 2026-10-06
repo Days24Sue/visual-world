@@ -19,7 +19,7 @@
 - [x] push this project to `main`
 - [x] set `web/config.js` GitHub URL to the real repository URL
 - [x] enable GitHub Pages with GitHub Actions as the source
-- [ ] publish a bounded real-data snapshot from an isolated build database
+- [x] publish a bounded real-data snapshot from an isolated build database
 - [ ] verify live search, provenance and image rights
 - [ ] verify the weekly refresh workflow
 - [ ] add final public domain name if desired

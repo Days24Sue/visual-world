@@ -6,7 +6,7 @@ The public repository uses `.github/workflows/pages.yml` to build a fresh, isola
 
 1. In repository Settings → Pages, select **GitHub Actions** as the build and deployment source.
 2. Run **Publish free beta** from Actions, or push a change to `main`. The workflow keeps the old site live if a connector or export fails.
-3. Open the Pages URL and verify search, source/year/public-domain/image filters, artwork details, original record links and rights text.
+3. Open [the Pages site](https://days24sue.github.io/visual-world/) and verify search, source/year/public-domain/image filters, artwork details, original record links and rights text.
 
 For a local preview using an existing synchronized database:
 

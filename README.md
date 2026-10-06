@@ -2,7 +2,7 @@
 
 **Visual World** is an open visual-culture index designed to aggregate as much publicly indexable art, illustration and design material as possible across museums, open collections and resource directories.
 
-The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world). The free public beta is built as a periodically refreshed GitHub Pages snapshot; the original Python API and Docker deployment remain available for a future dynamic host.
+The V0.5 code is published at [GitHub](https://github.com/Days24Sue/visual-world), and the [free public beta](https://days24sue.github.io/visual-world/) is live as a periodically refreshed GitHub Pages snapshot. The original Python API and Docker deployment remain available for a future dynamic host.
 
 It is **not** a hand-picked image gallery. The canonical database can grow beyond the bounded free-site snapshot. GitHub Pages searches its exported snapshot in the browser, while a future dynamic host can serve a larger corpus through the existing API.
 
